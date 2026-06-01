@@ -55,18 +55,16 @@ export default function AppHeader({ userProfile }: AppHeaderProps) {
     <AppBar position="sticky" color="inherit">
       <Toolbar sx={{ gap: 1.5 }}>
         <Box
+          component="img"
+          src="/logo.png"
+          alt="Matcon Casa Logo"
           sx={{
             width: 36,
             height: 36,
-            borderRadius: 2,
-            display: "grid",
-            placeItems: "center",
-            bgcolor: "primary.main",
-            color: "primary.contrastText",
+            borderRadius: 1,
+            objectFit: "contain",
           }}
-        >
-          <GroupsRoundedIcon />
-        </Box>
+        />
         <Typography variant="h6" sx={{ fontWeight: 700 }}>
           Engaja Matcon
         </Typography>

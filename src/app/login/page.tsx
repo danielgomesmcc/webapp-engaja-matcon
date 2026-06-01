@@ -79,18 +79,16 @@ export default function LoginPage() {
         <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
           <Stack spacing={1} sx={{ alignItems: "center", mb: 3 }}>
             <Box
+              component="img"
+              src="/logo.png"
+              alt="Matcon Casa Logo"
               sx={{
                 width: 56,
                 height: 56,
-                borderRadius: 3,
-                display: "grid",
-                placeItems: "center",
-                bgcolor: "primary.main",
-                color: "primary.contrastText",
+                borderRadius: 2,
+                objectFit: "contain",
               }}
-            >
-              <GroupsRoundedIcon fontSize="large" />
-            </Box>
+            />
             <Typography variant="h5" sx={{ fontWeight: 700 }}>
               Engaja Matcon
             </Typography>
