@@ -30,6 +30,8 @@ import {
   FormLabel,
   FormControlLabel,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   Typography,
   Paper,
@@ -47,6 +49,7 @@ import AddCircleRoundedIcon from "@mui/icons-material/AddCircleRounded";
 import LocalLibraryRoundedIcon from "@mui/icons-material/LocalLibraryRounded";
 import AssessmentRoundedIcon from "@mui/icons-material/AssessmentRounded";
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
+import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import * as XLSX from "xlsx";
 
@@ -95,6 +98,12 @@ export default function HomeClient({
   const [quizTime, setQuizTime] = useState("60");
   const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
   const [quizFileName, setQuizFileName] = useState("");
+  const [quizCreationMethod, setQuizCreationMethod] = useState<"file" | "manual">("file");
+  const [manualStatement, setManualStatement] = useState("");
+  const [manualRespA, setManualRespA] = useState("");
+  const [manualRespB, setManualRespB] = useState("");
+  const [manualRespC, setManualRespC] = useState("");
+  const [manualCorrect, setManualCorrect] = useState<"A" | "B" | "C">("A");
 
   // 2. Admin Poll state
   const [pollTitle, setPollTitle] = useState("");
@@ -278,8 +287,54 @@ export default function HomeClient({
     setQuizTime("60");
     setQuizFileName("");
     setQuizQuestions([]);
+    setQuizCreationMethod("file");
+    setManualStatement("");
+    setManualRespA("");
+    setManualRespB("");
+    setManualRespC("");
+    setManualCorrect("A");
     setAdminError(null);
     setAdminSuccess(null);
+  };
+
+  const handleAddManualQuestion = () => {
+    setAdminError(null);
+    setAdminSuccess(null);
+
+    const statement = manualStatement.trim();
+    const respA = manualRespA.trim();
+    const respB = manualRespB.trim();
+    const respC = manualRespC.trim();
+
+    if (!statement || !respA || !respB || !respC) {
+      setAdminError("Por favor, preencha a pergunta e todas as três respostas alternativas.");
+      return;
+    }
+
+    const newQuestion = {
+      statement,
+      options: [
+        { text: respA, is_correct: manualCorrect === "A" },
+        { text: respB, is_correct: manualCorrect === "B" },
+        { text: respC, is_correct: manualCorrect === "C" },
+      ],
+    };
+
+    setQuizQuestions((prev) => [...prev, newQuestion]);
+    
+    // Limpar os campos para a próxima pergunta
+    setManualStatement("");
+    setManualRespA("");
+    setManualRespB("");
+    setManualRespC("");
+    setManualCorrect("A");
+    
+    setAdminSuccess("Pergunta adicionada com sucesso!");
+  };
+
+  const handleRemoveManualQuestion = (indexToRemove: number) => {
+    setQuizQuestions((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+    setAdminSuccess("Pergunta removida!");
   };
 
   const handleCreateQuiz = async (e: React.FormEvent) => {
@@ -289,7 +344,11 @@ export default function HomeClient({
     setAdminSuccess(null);
 
     if (quizQuestions.length === 0) {
-      setAdminError("Por favor, faça o upload de uma planilha de quiz válida (.xlsx).");
+      setAdminError(
+        quizCreationMethod === "file"
+          ? "Por favor, faça o upload de uma planilha de quiz válida (.xlsx)."
+          : "Por favor, adicione pelo menos uma pergunta ao quiz antes de salvar."
+      );
       setAdminLoading(false);
       return;
     }
@@ -1048,7 +1107,7 @@ export default function HomeClient({
       <Dialog
         open={adminActionOpen === "quiz"}
         onClose={handleCloseQuizDialog}
-        maxWidth="xs"
+        maxWidth="sm"
         fullWidth
       >
         <form onSubmit={handleCreateQuiz}>
@@ -1056,6 +1115,7 @@ export default function HomeClient({
           <DialogContent dividers sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {adminError && <Alert severity="error">{adminError}</Alert>}
             {adminSuccess && <Alert severity="success">{adminSuccess}</Alert>}
+            
             <TextField
               label="Título do Quiz *"
               value={quizTitle}
@@ -1063,14 +1123,16 @@ export default function HomeClient({
               required
               fullWidth
             />
+            
             <TextField
               label="Descrição"
               value={quizDesc}
               onChange={(e) => setQuizDesc(e.target.value)}
               multiline
-              rows={3}
+              rows={2}
               fullWidth
             />
+            
             <TextField
               label="Tempo por Pergunta (segundos) *"
               type="number"
@@ -1079,25 +1141,147 @@ export default function HomeClient({
               required
               fullWidth
             />
-            
-            <Button
-              variant="outlined"
-              component="label"
-              startIcon={<CloudUploadRoundedIcon />}
-              sx={{ py: 1.5, borderStyle: "dashed" }}
+
+            <Divider sx={{ my: 1 }} />
+
+            <Tabs
+              value={quizCreationMethod}
+              onChange={(_, val) => {
+                setQuizCreationMethod(val);
+                setQuizQuestions([]);
+                setQuizFileName("");
+                setAdminError(null);
+                setAdminSuccess(null);
+              }}
+              variant="fullWidth"
+              sx={{ borderBottom: 1, borderColor: "divider", mb: 1 }}
             >
-              Selecionar Planilha do Quiz (.xlsx) *
-              <input
-                type="file"
-                accept=".xlsx, .xls"
-                hidden
-                onChange={handleQuizFileUpload}
-              />
-            </Button>
-            {quizFileName && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: "block", textAlign: "center" }}>
-                Arquivo selecionado: <strong>{quizFileName}</strong>
-              </Typography>
+              <Tab label="Planilha Excel" value="file" />
+              <Tab label="Criar Manualmente" value="manual" />
+            </Tabs>
+
+            {quizCreationMethod === "file" ? (
+              <Stack spacing={2}>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  startIcon={<CloudUploadRoundedIcon />}
+                  sx={{ py: 1.5, borderStyle: "dashed" }}
+                >
+                  Selecionar Planilha do Quiz (.xlsx) *
+                  <input
+                    type="file"
+                    accept=".xlsx, .xls"
+                    hidden
+                    onChange={handleQuizFileUpload}
+                  />
+                </Button>
+                {quizFileName && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", textAlign: "center" }}>
+                    Arquivo selecionado: <strong>{quizFileName}</strong>
+                  </Typography>
+                )}
+              </Stack>
+            ) : (
+              <Stack spacing={2}>
+                <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                  Perguntas Adicionadas ({quizQuestions.length})
+                </Typography>
+                
+                {quizQuestions.length > 0 ? (
+                  <Paper variant="outlined" sx={{ maxHeight: 150, overflow: "auto", p: 1, bgcolor: "background.default" }}>
+                    <List dense disablePadding>
+                      {quizQuestions.map((q, idx) => (
+                        <ListItem
+                          key={idx}
+                          secondaryAction={
+                            <IconButton edge="end" size="small" onClick={() => handleRemoveManualQuestion(idx)}>
+                              <DeleteRoundedIcon fontSize="small" color="error" />
+                            </IconButton>
+                          }
+                          disablePadding
+                        >
+                          <ListItemText
+                            primary={
+                              <Typography variant="body2" noWrap sx={{ pr: 4 }}>
+                                {`${idx + 1}. ${q.statement}`}
+                              </Typography>
+                            }
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Paper>
+                ) : (
+                  <Typography variant="caption" color="text.secondary" sx={{ textAlign: "center", py: 2 }}>
+                    Nenhuma pergunta adicionada ainda. Crie perguntas abaixo.
+                  </Typography>
+                )}
+
+                <Divider />
+
+                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                  Nova Pergunta
+                </Typography>
+
+                <TextField
+                  label="Enunciado da Pergunta *"
+                  placeholder="Ex: Qual o principal valor da Matcon?"
+                  value={manualStatement}
+                  onChange={(e) => setManualStatement(e.target.value)}
+                  fullWidth
+                  size="small"
+                />
+
+                <TextField
+                  label="Alternativa A *"
+                  placeholder="Ex: Transparência"
+                  value={manualRespA}
+                  onChange={(e) => setManualRespA(e.target.value)}
+                  fullWidth
+                  size="small"
+                />
+
+                <TextField
+                  label="Alternativa B *"
+                  placeholder="Ex: Lucro a qualquer custo"
+                  value={manualRespB}
+                  onChange={(e) => setManualRespB(e.target.value)}
+                  fullWidth
+                  size="small"
+                />
+
+                <TextField
+                  label="Alternativa C *"
+                  placeholder="Ex: Agilidade lenta"
+                  value={manualRespC}
+                  onChange={(e) => setManualRespC(e.target.value)}
+                  fullWidth
+                  size="small"
+                />
+
+                <FormControl component="fieldset">
+                  <FormLabel component="legend" sx={{ fontSize: "0.85rem", mb: 0.5 }}>Alternativa Correta *</FormLabel>
+                  <RadioGroup
+                    row
+                    value={manualCorrect}
+                    onChange={(e) => setManualCorrect(e.target.value as "A" | "B" | "C")}
+                  >
+                    <FormControlLabel value="A" control={<Radio size="small" />} label="Alternativa A" />
+                    <FormControlLabel value="B" control={<Radio size="small" />} label="Alternativa B" />
+                    <FormControlLabel value="C" control={<Radio size="small" />} label="Alternativa C" />
+                  </RadioGroup>
+                </FormControl>
+
+                <Button
+                  variant="outlined"
+                  startIcon={<AddCircleRoundedIcon />}
+                  onClick={handleAddManualQuestion}
+                  fullWidth
+                >
+                  Adicionar Pergunta
+                </Button>
+              </Stack>
             )}
           </DialogContent>
           <DialogActions>
