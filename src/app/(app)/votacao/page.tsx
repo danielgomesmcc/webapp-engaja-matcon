@@ -10,26 +10,27 @@ export default async function VotacaoPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Obter enquetes com suas respectivas opções
-  const { data: polls } = await supabase
-    .from("polls")
-    .select("*, poll_options(*)")
-    .eq("is_active", true)
-    .order("created_at", { ascending: false });
+  // Obter enquetes, votos do usuário e todos os votos em paralelo
+  const [pollsRes, userVotesRes, allVotesRes] = await Promise.all([
+    supabase
+      .from("polls")
+      .select("*, poll_options(*)")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("poll_votes")
+      .select("poll_id, option_id")
+      .eq("user_id", user?.id || ""),
+    supabase
+      .from("poll_votes")
+      .select("poll_id, option_id"),
+  ]);
 
-  // Obter os votos do usuário logado para saber em quais ele já votou
-  const { data: userVotes } = await supabase
-    .from("poll_votes")
-    .select("poll_id, option_id")
-    .eq("user_id", user?.id || "");
+  const polls = pollsRes.data;
+  const userVotes = userVotesRes.data;
+  const allVotes = allVotesRes.data;
 
   const votedPollIds = new Set((userVotes || []).map((v) => v.poll_id));
-
-  // Para cada enquete já votada, obter a contagem geral de votos
-  // (Poderíamos fazer isso agregando os votos na API)
-  const { data: allVotes } = await supabase
-    .from("poll_votes")
-    .select("poll_id, option_id");
 
   return (
     <Stack spacing={3}>

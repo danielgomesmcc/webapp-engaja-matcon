@@ -13,18 +13,21 @@ export default async function QuizPage() {
     redirect("/login");
   }
 
-  // Buscar todos os quizzes ativos
-  const { data: quizzes } = await supabase
-    .from("quizzes")
-    .select("*")
-    .eq("is_active", true)
-    .order("created_at", { ascending: false });
+  // Buscar quizzes ativos e resultados do usuário em paralelo
+  const [quizzesRes, userResultsRes] = await Promise.all([
+    supabase
+      .from("quizzes")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("quiz_results")
+      .select("quiz_id, score, correct_count")
+      .eq("user_id", user.id),
+  ]);
 
-  // Buscar resultados de quizzes para este usuário específico
-  const { data: userResults } = await supabase
-    .from("quiz_results")
-    .select("quiz_id, score, correct_count")
-    .eq("user_id", user.id);
+  const quizzes = quizzesRes.data;
+  const userResults = userResultsRes.data;
 
   return (
     <QuizListClient

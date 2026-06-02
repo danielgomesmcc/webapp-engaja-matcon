@@ -28,17 +28,20 @@ export default async function TreinamentosPage() {
     redirect("/login");
   }
 
-  // Obter treinamentos do banco
-  const { data: trainings } = await supabase
-    .from("trainings")
-    .select("*")
-    .order("created_at", { ascending: false });
+  // Obter treinamentos e status de conclusão em paralelo
+  const [trainingsRes, userResultsRes] = await Promise.all([
+    supabase
+      .from("trainings")
+      .select("*")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("training_results")
+      .select("training_id, status, score")
+      .eq("user_id", user.id),
+  ]);
 
-  // Obter status de conclusão do usuário logado
-  const { data: userResults } = await supabase
-    .from("training_results")
-    .select("training_id, status, score")
-    .eq("user_id", user.id);
+  const trainings = trainingsRes.data;
+  const userResults = userResultsRes.data;
 
   const completionMap = new Map(
     (userResults || []).map((r) => [r.training_id, { status: r.status, score: r.score }])

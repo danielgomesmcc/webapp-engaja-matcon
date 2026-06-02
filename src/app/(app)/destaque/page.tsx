@@ -38,33 +38,34 @@ export default async function DestaquesPage() {
     redirect("/login");
   }
 
-  // 1. Carregar Hall da Fama (histórico de Funcionários do Mês)
-  const { data: hallOfFame } = await supabase
-    .from("employee_of_month")
-    .select("*, profiles(*, departments(name)), company_principles(name)")
-    .order("year", { ascending: false })
-    .order("month", { ascending: false });
+  // Carregar Hall da Fama, histórico de quizzes, treinamentos e votações em paralelo
+  const [hallOfFameRes, quizHistoryRes, trainingHistoryRes, pollHistoryRes] = await Promise.all([
+    supabase
+      .from("employee_of_month")
+      .select("*, profiles(*, departments(name)), company_principles(name)")
+      .order("year", { ascending: false })
+      .order("month", { ascending: false }),
+    supabase
+      .from("quiz_results")
+      .select("*, quizzes(title)")
+      .eq("user_id", user.id)
+      .order("completed_at", { ascending: false }),
+    supabase
+      .from("training_results")
+      .select("*, trainings(title)")
+      .eq("user_id", user.id)
+      .order("completed_at", { ascending: false }),
+    supabase
+      .from("poll_votes")
+      .select("*, polls(title)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+  ]);
 
-  // 2. Histórico de Quizzes respondidos pelo usuário logado
-  const { data: quizHistory } = await supabase
-    .from("quiz_results")
-    .select("*, quizzes(title)")
-    .eq("user_id", user.id)
-    .order("completed_at", { ascending: false });
-
-  // 3. Histórico de Treinamentos concluídos pelo usuário logado
-  const { data: trainingHistory } = await supabase
-    .from("training_results")
-    .select("*, trainings(title)")
-    .eq("user_id", user.id)
-    .order("completed_at", { ascending: false });
-
-  // 4. Histórico de Votações do usuário logado
-  const { data: pollHistory } = await supabase
-    .from("poll_votes")
-    .select("*, polls(title)")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  const hallOfFame = hallOfFameRes.data;
+  const quizHistory = quizHistoryRes.data;
+  const trainingHistory = trainingHistoryRes.data;
+  const pollHistory = pollHistoryRes.data;
 
   const getInitials = (name: string | null, username: string) => {
     const display = name || username;
